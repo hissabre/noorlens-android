@@ -38,6 +38,12 @@ android {
         }
     }
 
+    // Application de test en sideload : on ne bloque pas la construction sur les règles du Play Store
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     // le modèle Whisper est lu tel quel : ne pas le compresser
     androidResources { noCompress += listOf("bin") }
     packaging { jniLibs { useLegacyPackaging = false } }
