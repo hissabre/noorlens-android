@@ -1,0 +1,63 @@
+name: Construire l'APK Noor Lens
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Modèle Whisper embarqué (tiny = le plus rapide, small = le plus précis)"
+        type: choice
+        default: base-q5_1
+        options:
+          - tiny-q5_1
+          - base-q5_1
+          - small-q5_1
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MODEL: ${{ inputs.model || 'base-q5_1' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Outils Android (SDK, NDK, CMake)
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Télécharger whisper.cpp (v1.7.2)
+        run: git clone --depth 1 --branch v1.7.2 https://github.com/ggerganov/whisper.cpp.git app/src/main/cpp/whisper.cpp
+
+      - name: Télécharger le modèle Whisper (${{ env.MODEL }})
+        run: |
+          mkdir -p app/src/main/assets/models
+          curl -L --fail --retry 3 -o "app/src/main/assets/models/ggml-${MODEL}.bin" \
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-${MODEL}.bin"
+          ls -la app/src/main/assets/models
+
+      - name: Clé de signature de test
+        run: |
+          mkdir -p ~/.android
+          [ -f ~/.android/debug.keystore ] || keytool -genkey -v -keystore ~/.android/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+            -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Construire l'APK
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NoorLens-apk
+          path: app/build/outputs/apk/release/*.apk
