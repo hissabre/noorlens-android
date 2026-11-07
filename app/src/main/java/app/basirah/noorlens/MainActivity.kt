@@ -34,7 +34,7 @@ class MainActivity : android.app.Activity() {
             onStatus = { s -> js("window.__ns&&window.__ns(${q(s)})") },
         )
         web = WebView(this).apply {
-            setBackgroundColor(0xFF0B1512.toInt())
+            setBackgroundColor(0xFF050811.toInt())
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
